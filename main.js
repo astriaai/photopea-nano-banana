@@ -13,6 +13,7 @@ async function finalizeResponse(serverPrompt, bounds, prompt) {
   }
   const imageUrl = serverPrompt.images[0];
   document.getElementById('preview-image').src = imageUrl;
+  console.log('resizing back to', boundWidth(bounds), boundHeight(bounds), 'bounds', bounds)
   await photopeaContext.pasteImageOnPhotopea(
     await resizeImage(imageUrl, boundWidth(bounds), boundHeight(bounds)),
     bounds,
@@ -87,7 +88,7 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
   try {
     initAuthHeaders();
     const prompt_text = document.getElementById('prompt-input').value;
-    const imageBuffer = await photopeaContext.invokeAsTask('exportSelectedLayerOnly', 'PNG');
+    const imageBuffer = await photopeaContext.invokeAsTask('exportAllLayers', 'PNG');
     const bounds = JSON.parse(await photopeaContext.invokeAsTask('getSelectionBound'));
 
     const croppedPayloadImage = await cropImage(imageBuffer, bounds);
