@@ -36,7 +36,6 @@ function initAuthHeaders() {
     }
   }
   axiosInstance.interceptors.request.use(function (config) {
-    console.log('adding auth header');
     config.headers.Authorization =  'Bearer ' + apiKey;
     return config;
   });
