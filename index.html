@@ -9,10 +9,10 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
 </head>
 <body class="p-4">
-  <a href="https://www.astria.ai/users/edit#api" target="_blank" class="text-primary underline">Get an API key from Astria</a>
+  <a href="https://www.astria.ai/users/sign_in?redirect_to=/users/edit&aff=photopea" target="_blank" class="text-primary underline">Get an API key from Astria</a>
   <form id="prompt-form" class="form-control">
     <label class="label" for="prompt-input">Enter prompt</label>
-    <input id="prompt-input" name="prompt" type="text" placeholder="Type prompt..." class="input input-bordered w-full" required />
+    <input id="prompt-input" name="prompt" type="text" placeholder="Type prompt..." autofocus class="input input-bordered w-full" required />
     <button type="submit" class="btn btn-primary mt-4">
         Submit
       <span id="spinner" class="ml-2 hidden">

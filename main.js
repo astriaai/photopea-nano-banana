@@ -100,7 +100,7 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
     const response = await axiosInstance.post(GEMINI_URL, form)
     const id = response.data.id;
     for (let i = 0; i < 60; i++) {
-      const pollResponse = await axiosInstance.get(`prompts/${id}.json`)
+      const pollResponse = await axiosInstance.get(`prompts/${id}`)
       if (pollResponse.data.trained_at) {
         await finalizeResponse(pollResponse.data, bounds, prompt_text)
         return;
