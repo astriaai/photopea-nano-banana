@@ -1,0 +1,94 @@
+const axiosInstance = axios.create({
+  baseURL: 'http://localhost:3000/',
+  headers: {
+    'Accept': 'application/json',
+  }
+})
+
+async function finalizeResponse(serverPrompt, bounds, prompt) {
+  if (serverPrompt.user_error || serverPrompt.images.length === 0) {
+    alert(serverPrompt.user_error || "Unknown error");
+    return;
+  }
+  const imageUrl = serverPrompt.images[0];
+  document.getElementById('preview-image').src = imageUrl;
+  await photopeaContext.pasteImageOnPhotopea(
+    await resizeImage(imageUrl, boundWidth(bounds), boundHeight(bounds)),
+    bounds,
+    prompt.slice(0, 10)
+  )
+}
+
+let authHeadersInitialized = false;
+function initAuthHeaders() {
+  if (authHeadersInitialized) {
+    return;
+  }
+  let apiKey = localStorage.getItem('astriaApiKey');
+  if (!apiKey) {
+    apiKey = prompt('Astria API KEY');
+    if (apiKey) {
+      localStorage.setItem('astriaApiKey', apiKey);
+    } else {
+      throw new Error('API key required');
+    }
+  }
+  axiosInstance.interceptors.request.use(function (config) {
+    console.log('adding auth header');
+    config.headers.Authorization =  'Bearer ' + apiKey;
+    return config;
+  });
+  authHeadersInitialized = true;
+
+}
+
+function dataURItoBlob(dataURI) {
+  // convert base64 to raw binary data held in a string
+  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+  var byteString = atob(dataURI.split(',')[1]);
+
+  // separate out the mime component
+  var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+
+  // write the bytes of the string to an ArrayBuffer
+  var ab = new ArrayBuffer(byteString.length);
+
+  // create a view into the buffer
+  var ia = new Uint8Array(ab);
+
+  // set the bytes of the buffer to the correct values
+  for (var i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+
+  // write the ArrayBuffer to a blob, and you're done
+  var blob = new Blob([ab], {type: mimeString});
+  return blob;
+
+}
+
+document.getElementById('prompt-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  initAuthHeaders();
+  const prompt_text = document.getElementById('prompt-input').value;
+  const imageBuffer = await photopeaContext.invokeAsTask('exportSelectedLayerOnly', 'PNG');
+  const bounds = JSON.parse(await photopeaContext.invokeAsTask('getSelectionBound'));
+
+  const croppedPayloadImage = await cropImage(imageBuffer, bounds);
+  document.getElementById('preview-image').src = croppedPayloadImage.dataURL
+  const imageBlob = dataURItoBlob(croppedPayloadImage.dataURL);
+  const form = new FormData();
+  form.append('prompt[text]', prompt_text);
+  form.append('prompt[num_images]', 1);
+  form.append('prompt[input_image]', imageBlob, 'image.png')
+  const response = await axiosInstance.post('tunes/33/prompts.json', form)
+  const id = response.data.id;
+  for(let i = 0; i < 60; i++) {
+    const pollResponse = await axiosInstance.get(`prompts/${id}.json`)
+    if (pollResponse.data.trained_at) {
+      return finalizeResponse(pollResponse.data, bounds, prompt_text)
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+})

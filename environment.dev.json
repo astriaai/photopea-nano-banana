@@ -1,0 +1,15 @@
+{
+  "files": [
+    "https://www.photopea.com/api/img2/pug.png"
+  ],
+  "environment": {
+    "plugins": [
+      {
+        "name": "Nano-Banana for Photopea",
+        "description": "Selection-based AI image generation (Nano-Banana)",
+        "url": "https://localhost:4443/",
+        "icon": "https://localhost:4443/icon.jpeg"
+      }
+    ]
+  }
+}
