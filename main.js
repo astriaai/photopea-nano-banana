@@ -89,7 +89,21 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
     initAuthHeaders();
     const prompt_text = document.getElementById('prompt-input').value;
     const imageBuffer = await photopeaContext.invokeAsTask('exportAllLayers', 'PNG');
-    const bounds = JSON.parse(await photopeaContext.invokeAsTask('getSelectionBound'));
+    let bounds;
+    try {
+      const selectionStr = await photopeaContext.invokeAsTask('getSelectionBound');
+      bounds = JSON.parse(selectionStr);
+    } catch (e) {
+      console.warn('getSelectionBound failed, falling back to whole picture. Error:', e);
+      // Derive full-image bounds from exported buffer size
+      try {
+        const imgObj = await loadImage(imageBuffer);
+        bounds = [0, 0, imgObj.width, imgObj.height];
+      } catch (e2) {
+        console.error('Failed to determine image size from buffer for fallback:', e2);
+        throw new Error('Unable to determine bounds');
+      }
+    }
 
     const croppedPayloadImage = await cropImage(imageBuffer, bounds);
     document.getElementById('preview-image').src = croppedPayloadImage.dataURL
