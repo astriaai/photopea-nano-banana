@@ -4,7 +4,7 @@ const axiosInstance = axios.create({
     'Accept': 'application/json',
   }
 });
-const GEMINI_URL = location.host.includes('localhost') ? 'tunes/33/prompts.json' : 'tunes/3159068/prompts/json';
+const GEMINI_URL = location.host.includes('localhost') ? 'tunes/33/prompts' : 'tunes/3159068/prompts';
 
 async function finalizeResponse(serverPrompt, bounds, prompt) {
   if (serverPrompt.user_error || serverPrompt.images.length === 0) {
@@ -68,28 +68,51 @@ function dataURItoBlob(dataURI) {
 
 }
 
+// Toggle spinner visibility and disable/enable the submit button during processing
+function toggleProcessing(isProcessing) {
+  const spinner = document.getElementById('spinner');
+  const form = document.getElementById('prompt-form');
+  const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+  if (spinner) spinner.classList.toggle('hidden', !isProcessing);
+  if (submitBtn) submitBtn.disabled = isProcessing;
+}
+
+let isProcessing = false;
+
 document.getElementById('prompt-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  initAuthHeaders();
-  const prompt_text = document.getElementById('prompt-input').value;
-  const imageBuffer = await photopeaContext.invokeAsTask('exportSelectedLayerOnly', 'PNG');
-  const bounds = JSON.parse(await photopeaContext.invokeAsTask('getSelectionBound'));
+  if (isProcessing) return; // Prevent duplicate submissions
+  isProcessing = true;
+  toggleProcessing(true);
+  try {
+    initAuthHeaders();
+    const prompt_text = document.getElementById('prompt-input').value;
+    const imageBuffer = await photopeaContext.invokeAsTask('exportSelectedLayerOnly', 'PNG');
+    const bounds = JSON.parse(await photopeaContext.invokeAsTask('getSelectionBound'));
 
-  const croppedPayloadImage = await cropImage(imageBuffer, bounds);
-  document.getElementById('preview-image').src = croppedPayloadImage.dataURL
-  const imageBlob = dataURItoBlob(croppedPayloadImage.dataURL);
-  const form = new FormData();
-  form.append('prompt[text]', prompt_text);
-  form.append('prompt[num_images]', 1);
-  form.append('prompt[input_image]', imageBlob, 'image.png')
-  const response = await axiosInstance.post(GEMINI_URL, form)
-  const id = response.data.id;
-  for(let i = 0; i < 60; i++) {
-    const pollResponse = await axiosInstance.get(`prompts/${id}.json`)
-    if (pollResponse.data.trained_at) {
-      return finalizeResponse(pollResponse.data, bounds, prompt_text)
+    const croppedPayloadImage = await cropImage(imageBuffer, bounds);
+    document.getElementById('preview-image').src = croppedPayloadImage.dataURL
+    const imageBlob = dataURItoBlob(croppedPayloadImage.dataURL);
+    const form = new FormData();
+    form.append('prompt[text]', prompt_text);
+    form.append('prompt[num_images]', 1);
+    form.append('prompt[input_image]', imageBlob, 'image.png')
+    const response = await axiosInstance.post(GEMINI_URL, form)
+    const id = response.data.id;
+    for (let i = 0; i < 60; i++) {
+      const pollResponse = await axiosInstance.get(`prompts/${id}.json`)
+      if (pollResponse.data.trained_at) {
+        await finalizeResponse(pollResponse.data, bounds, prompt_text)
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    alert('Processing timed out. Please try again.');
+  } catch (e) {
+    console.error(e);
+    alert(e?.message || 'An unexpected error occurred.');
+  } finally {
+    toggleProcessing(false);
+    isProcessing = false;
   }
-
-})
+});
