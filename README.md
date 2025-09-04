@@ -2,8 +2,7 @@
 
 ## Install
 1. Go to Plugins
-2. Add plugin (at the top)
-3. URL: https://astriaai.github.io/photopea-nano-banana/
+2. Search for "Nano-Banana" plugin by Astria
 
 # Development:
 1. Launch `python3 server.py` (see instructions to create SSL cert in server.py)
