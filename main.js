@@ -129,7 +129,7 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
     alert(e?.message || 'An unexpected error occurred.');
   } finally {
     if (id) {
-      await axiosInstance.delete(`prompts/${id}`);
+      // await axiosInstance.delete(`prompts/${id}`);
     }
     toggleProcessing(false);
     isProcessing = false;
