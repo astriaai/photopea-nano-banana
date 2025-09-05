@@ -1,10 +1,11 @@
+let isDev = location.host.includes('localhost');
 const axiosInstance = axios.create({
-  baseURL: location.host.includes('localhost') ? 'http://localhost:3000/' : 'https://api.astria.ai/',
+  baseURL: isDev ? 'http://localhost:3000/' : 'https://api.astria.ai/',
   headers: {
     'Accept': 'application/json',
   }
 });
-const GEMINI_URL = location.host.includes('localhost') ? 'tunes/33/prompts' : 'tunes/3159068/prompts';
+const GEMINI_URL = isDev ? 'tunes/33/prompts' : 'tunes/3159068/prompts';
 
 async function finalizeResponse(serverPrompt, bounds, prompt) {
   if (serverPrompt.user_error || serverPrompt.images.length === 0) {
@@ -84,6 +85,7 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
   if (isProcessing) return; // Prevent duplicate submissions
   isProcessing = true;
   toggleProcessing(true);
+  let id = null;
   try {
     initAuthHeaders();
     const prompt_text = document.getElementById('prompt-input').value;
@@ -112,7 +114,7 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
     form.append('prompt[num_images]', 1);
     form.append('prompt[input_image]', imageBlob, 'image.png')
     const response = await axiosInstance.post(GEMINI_URL, form)
-    const id = response.data.id;
+    id = response.data.id;
     for (let i = 0; i < 60; i++) {
       const pollResponse = await axiosInstance.get(`prompts/${id}`)
       if (pollResponse.data.trained_at) {
@@ -126,6 +128,9 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
     console.error(e);
     alert(e?.message || 'An unexpected error occurred.');
   } finally {
+    if (id) {
+      await axiosInstance.delete(`prompts/${id}`);
+    }
     toggleProcessing(false);
     isProcessing = false;
   }
