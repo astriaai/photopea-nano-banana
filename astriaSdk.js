@@ -57,21 +57,27 @@ async function createTune(base_tune_id, payload) {
   delete payload['input_images'];
   const tunePayload = {
     name: 'subject',
-    title: 'subject',
+    // add timestamp to avoid idempodent requests
+    title: 'subject ' + new Date().getTime(),
     model_type: 'faceid',
     base_tune_id: base_tune_id,
     images: input_images,
-    prompts_attributes: [
-      payload
-    ]
+    // prompts_attributes: [
+    //   payload
+    // ]
   }
   const formData = appendToFormData(tunePayload, 'tune')
   const response = await axiosInstance.post('/tunes', formData);
   const tuneData = response.data;
-  if(!tuneData.prompts || tuneData.prompts.length == 0) {
-    throw new Error("Failed creating prompts");
-  }
-  return await pollPrompt(tuneData.prompts[0].id);
+  // if(!tuneData.prompts || tuneData.prompts.length == 0) {
+  //   throw new Error("Failed creating prompts");
+  // }
+  // return await pollPrompt(tuneData.prompts[0].id);
+
+  const responsePrompt = await axiosInstance.post(`/tunes/${tuneData.id}/prompts`, appendToFormData(payload, 'prompt'));
+  const processedPrompt =  await pollPrompt(responsePrompt.data.id);
+  processedPrompt.tunes = [tuneData];
+  return processedPrompt;
 }
 
 function appendToFormData(payload, prefix, formData) {

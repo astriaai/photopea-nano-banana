@@ -94,12 +94,12 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
   if (isProcessing) return; // Prevent duplicate submissions
   isProcessing = true;
   toggleProcessing(true);
-  let id = null;
+  let serverPrompt = null;
   try {
     const [imageBlob, bounds] = await getImageBlob();
     const url = document.getElementById('model-select').value
     const prompt_text = document.getElementById('prompt-input').value;
-    const serverPrompt = await createPromptByModelName(url, {
+    serverPrompt = await createPromptByModelName(url, {
       text: prompt_text,
       input_image: imageBlob,
       input_images: document.getElementById('reference-images').files,
@@ -112,9 +112,15 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
     console.error(e);
     alert(e?.message || 'An unexpected error occurred.');
   } finally {
-    if (id) {
-      // await axiosInstance.delete(`prompts/${id}`);
-    }
+    // if (serverPrompt) {
+    //   if(serverPrompt.tunes) {
+    //     serverPrompt.tunes.forEach(async (tune) => {
+    //       await axiosInstance.delete(`tunes/${tune.id}`);
+    //     });
+    //   } else {
+    //     await axiosInstance.delete(`prompts/${serverPrompt.id}`);
+    //   }
+    // }
     toggleProcessing(false);
     isProcessing = false;
   }
