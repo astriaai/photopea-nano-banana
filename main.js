@@ -46,6 +46,29 @@ function toggleProcessing(isProcessing) {
 
 let isProcessing = false;
 
+async function getImageBlob() {
+  const imageBuffer = await photopeaContext.invokeAsTask('exportAllLayers', 'PNG');
+  let bounds;
+  try {
+    const selectionStr = await photopeaContext.invokeAsTask('getSelectionBound');
+    bounds = JSON.parse(selectionStr);
+  } catch (e) {
+    console.warn('getSelectionBound failed, falling back to whole picture. Error:', e);
+    try {
+      const imgObj = await loadImage(imageBuffer);
+      bounds = [0, 0, imgObj.width, imgObj.height];
+    } catch (e2) {
+      console.error('Failed to determine image size from buffer for fallback:', e2);
+      throw new Error('Unable to determine bounds');
+    }
+  }
+
+  const croppedPayloadImage = await cropImage(imageBuffer, bounds);
+  document.getElementById('preview-image').src = croppedPayloadImage.dataURL
+  const imageBlob = dataURItoBlob(croppedPayloadImage.dataURL);
+  return [imageBlob, bounds];
+}
+
 document.getElementById('prompt-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (isProcessing) return; // Prevent duplicate submissions
@@ -54,29 +77,10 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
   let id = null;
   try {
     const prompt_text = document.getElementById('prompt-input').value;
-    const imageBuffer = await photopeaContext.invokeAsTask('exportAllLayers', 'PNG');
-    let bounds;
-    try {
-      const selectionStr = await photopeaContext.invokeAsTask('getSelectionBound');
-      bounds = JSON.parse(selectionStr);
-    } catch (e) {
-      console.warn('getSelectionBound failed, falling back to whole picture. Error:', e);
-      // Derive full-image bounds from exported buffer size
-      try {
-        const imgObj = await loadImage(imageBuffer);
-        bounds = [0, 0, imgObj.width, imgObj.height];
-      } catch (e2) {
-        console.error('Failed to determine image size from buffer for fallback:', e2);
-        throw new Error('Unable to determine bounds');
-      }
-    }
-
-    const croppedPayloadImage = await cropImage(imageBuffer, bounds);
-    document.getElementById('preview-image').src = croppedPayloadImage.dataURL
-    const imageBlob = dataURItoBlob(croppedPayloadImage.dataURL);
     const form = new FormData();
     form.append('prompt[text]', prompt_text);
     form.append('prompt[num_images]', 1);
+    const [imageBlob, bounds] = await getImageBlob();
     form.append('prompt[input_image]', imageBlob, 'image.png')
     const serverPrompt = await createPrompt(GEMINI_URL, form)
     await finalizeResponse(serverPrompt, bounds, prompt_text)
