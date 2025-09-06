@@ -1,17 +1,5 @@
-let isDev = location.host.includes('localhost');
-const axiosInstance = axios.create({
-  baseURL: isDev ? 'http://localhost:3000/' : 'https://api.astria.ai/',
-  headers: {
-    'Accept': 'application/json',
-  }
-});
-const GEMINI_URL = isDev ? 'tunes/33/prompts' : 'tunes/3159068/prompts';
 
 async function finalizeResponse(serverPrompt, bounds, prompt) {
-  if (serverPrompt.user_error || serverPrompt.images.length === 0) {
-    alert(serverPrompt.user_error || "Unknown error");
-    return;
-  }
   const imageUrl = serverPrompt.images[0];
   document.getElementById('preview-image').src = imageUrl;
   console.log('resizing back to', boundWidth(bounds), boundHeight(bounds), 'bounds', bounds)
@@ -20,28 +8,6 @@ async function finalizeResponse(serverPrompt, bounds, prompt) {
     bounds,
     prompt.slice(0, 10)
   )
-}
-
-let authHeadersInitialized = false;
-function initAuthHeaders() {
-  if (authHeadersInitialized) {
-    return;
-  }
-  let apiKey = localStorage.getItem('astriaApiKey');
-  if (!apiKey) {
-    apiKey = prompt('Astria API KEY');
-    if (apiKey) {
-      localStorage.setItem('astriaApiKey', apiKey);
-    } else {
-      throw new Error('API key required');
-    }
-  }
-  axiosInstance.interceptors.request.use(function (config) {
-    config.headers.Authorization =  'Bearer ' + apiKey;
-    return config;
-  });
-  authHeadersInitialized = true;
-
 }
 
 function dataURItoBlob(dataURI) {
@@ -87,7 +53,6 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
   toggleProcessing(true);
   let id = null;
   try {
-    initAuthHeaders();
     const prompt_text = document.getElementById('prompt-input').value;
     const imageBuffer = await photopeaContext.invokeAsTask('exportAllLayers', 'PNG');
     let bounds;
@@ -113,17 +78,8 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
     form.append('prompt[text]', prompt_text);
     form.append('prompt[num_images]', 1);
     form.append('prompt[input_image]', imageBlob, 'image.png')
-    const response = await axiosInstance.post(GEMINI_URL, form)
-    id = response.data.id;
-    for (let i = 0; i < 60; i++) {
-      const pollResponse = await axiosInstance.get(`prompts/${id}`)
-      if (pollResponse.data.trained_at) {
-        await finalizeResponse(pollResponse.data, bounds, prompt_text)
-        return;
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    alert('Processing timed out. Please try again.');
+    const serverPrompt = await createPrompt(GEMINI_URL, form)
+    await finalizeResponse(serverPrompt, bounds, prompt_text)
   } catch (e) {
     console.error(e);
     alert(e?.message || 'An unexpected error occurred.');
