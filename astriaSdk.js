@@ -44,32 +44,62 @@ async function createPromptByModelName(name, payload) {
   if(!payload['num_images']) {
     payload['num_images'] = 1
   }
+  if(payload['input_images']) {
+    const base_tune_id = MODEL_URLS[name]
+    return createTune(base_tune_id, payload)
+  }
   const url = `/tunes/${MODEL_URLS[name]}/prompts`;
   return createPrompt(url, payload)
 }
 
-async function createPrompt(url, payload) {
-  const formData = new FormData();
-  // iterate payload and add to formData
+async function createTune(base_tune_id, payload) {
+  let input_images = payload['input_images'];
+  delete payload['input_images'];
+  const tunePayload = {
+    name: 'subject',
+    title: 'subject',
+    model_type: 'faceid',
+    base_tune_id: base_tune_id,
+    images: input_images,
+    prompts_attributes: [
+      payload
+    ]
+  }
+  const formData = appendToFormData(tunePayload, 'tune')
+  const response = await axiosInstance.post('/tunes', formData);
+  const tuneData = response.data;
+  if(!tuneData.prompts || tuneData.prompts.length == 0) {
+    throw new Error("Failed creating prompts");
+  }
+  return await pollPrompt(tuneData.prompts[0].id);
+}
+
+function appendToFormData(payload, prefix, formData) {
+  if(!formData) {
+    formData = new FormData();
+  }
   for (const [key, value] of Object.entries(payload)) {
-    if(key === 'input_image') {
-      formData.append('prompt[input_image]', value, 'image.png')
+    if(value instanceof FileList) {
+      for (let i = 0; i < value.length; i++) {
+        formData.append(`${prefix}[${key}][${i}]`, value[i]);
+      }
+    } else if(value instanceof Blob) {
+      // the Photopea image is PNG exported
+      formData.append(`${prefix}[${key}]`, value, 'image.png');
+    } else if(typeof value === 'object') {
+      if(Array.isArray(value)) {
+        value.forEach((v, i) => appendToFormData(v, `${prefix}[${key}][]`, formData))
+      } else {
+        appendToFormData(value, `${prefix}[${key}]`, formData);
+      }
     } else {
-      formData.append(`prompt[${key}]`, value);
+      formData.append(`${prefix}[${key}]`, value);
     }
   }
+  return formData;
+}
 
-  let id;
-  try {
-    const response = await axiosInstance.post(url, formData);
-    id = response.data.id;
-  } catch (err) {
-    if (err?.response?.status === 422) {
-      throw new Error(JSON.stringify(err.response.data));
-    }
-    throw err;
-  }
-
+async function pollPrompt(id) {
   for (let i = 0; i < 60; i++) {
     const pollResponse = await axiosInstance.get(`prompts/${id}`)
     const data = pollResponse.data;
@@ -82,4 +112,19 @@ async function createPrompt(url, payload) {
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
   throw new Error('Processing Timeout');
+}
+
+async function createPrompt(url, payload) {
+  const formData = appendToFormData(payload, 'prompt');
+  let id;
+  try {
+    const response = await axiosInstance.post(url, formData);
+    id = response.data.id;
+  } catch (err) {
+    if (err?.response?.status === 422) {
+      throw new Error(JSON.stringify(err.response.data));
+    }
+    throw err;
+  }
+  return await pollPrompt(id);
 }

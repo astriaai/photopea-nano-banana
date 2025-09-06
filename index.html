@@ -32,6 +32,11 @@
         <input id="prompt-input" name="prompt" type="text" placeholder="Type prompt..." class="input input-bordered w-full" />
       </div>
       <div class="w-full mb-2">
+        <label class="label" for="reference-images">Reference images</label>
+        <input id="reference-images" name="referenceImages" type="file" accept="image/*" multiple class="file-input file-input-bordered w-full" />
+        <button type="button" class="btn btn-ghost btn-sm mt-2" aria-label="Clear selected reference images" onclick="document.getElementById('reference-images').value = ''">Clear</button>
+      </div>
+      <div class="w-full mb-2">
         <label class="label" for="model-select">Model</label>
         <select id="model-select" class="select select-bordered w-full"></select>
       </div>
@@ -48,7 +53,7 @@
   </div>
 
 
-  <footer role="contentinfo" class="mt-10 pt-6 text-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+  <footer role="contentinfo" class="mt-0 pt-6 text-sm flex flex-col sm:flex-row items-center justify-between gap-4">
     <div class="flex items-center gap-2">
       <span class="inline-flex items-center gap-1">
         <span>Built with</span>

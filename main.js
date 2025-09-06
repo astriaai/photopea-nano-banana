@@ -96,13 +96,13 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
   toggleProcessing(true);
   let id = null;
   try {
-    const form = new FormData();
     const [imageBlob, bounds] = await getImageBlob();
     const url = document.getElementById('model-select').value
     const prompt_text = document.getElementById('prompt-input').value;
     const serverPrompt = await createPromptByModelName(url, {
       text: prompt_text,
       input_image: imageBlob,
+      input_images: document.getElementById('reference-images').files,
     })
     await pasteBackResponseImage(serverPrompt, bounds, prompt_text)
   } catch (e) {
