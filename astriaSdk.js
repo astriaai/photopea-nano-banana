@@ -44,7 +44,7 @@ async function createPromptByModelName(name, payload) {
   if(!payload['num_images']) {
     payload['num_images'] = 1
   }
-  if(payload['input_images']) {
+  if(payload['input_images'] && payload['input_images'].length > 0) {
     const base_tune_id = MODEL_URLS[name]
     return createTune(base_tune_id, payload)
   }
