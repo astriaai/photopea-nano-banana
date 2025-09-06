@@ -14,10 +14,8 @@ function signout() {
   initializeAuth();
 }
 
-function askAuth() {
-  // open this.href in new window
-  window.open(this.href, '_blank');
-  const apiKey = prompt('Enter your Astria API key');
+function submitAuth() {
+  const apiKey = document.getElementById('api-key-input').value;
   if (apiKey) {
     localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
     initializeAuth();

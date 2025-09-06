@@ -9,9 +9,20 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
 </head>
 <body class="p-4">
-  <div id="auth" class="text-center">
+  <div id="auth" class="text-centexr">
     <p>In order to use this plugin, you will need to get a free API key from Astria with free credits</p>
-    <a onclick="askAuth()" href="https://www.astria.ai/users/sign_in?redirect_to=/users/edit&aff=photopea" target="_blank" class="btn btn-primary btn btn-primary my-4">Get an API key</a>
+
+    <div class="my-4">
+      <h2 class="font-semibold">Step 1) Get API key</h2>
+      <a href="https://www.astria.ai/users/sign_in?redirect_to=/users/edit&aff=photopea" target="_blank" rel="noopener" class="btn btn-primary my-2">Open Astria</a>
+    </div>
+
+    <form id="api-key-form" class="form-control gap-2" onsubmit="submitAuth()">
+      <h2 class="font-semibold">Step 2) Save</h2>
+      <label class="label" for="api-key-input">Enter API key</label>
+      <input id="api-key-input" name="apiKey" type="text" placeholder="Paste API key. Starts with sd_*****" class="input input-bordered w-full max-w-md" autocomplete="off" />
+      <button type="submit" class="btn btn-primary my-2">Save</button>
+    </form>
   </div>
 
   <div id="main" class="hidden">
