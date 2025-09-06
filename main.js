@@ -81,7 +81,8 @@ async function pasteBackResponseImage(serverPrompt, bounds, prompt_text) {
   document.getElementById('preview-image').src = imageUrl;
   console.log('resizing back to', boundWidth(bounds), boundHeight(bounds), 'bounds', bounds)
   await photopeaContext.pasteImageOnPhotopea(
-    await resizeImage(imageUrl, boundWidth(bounds), boundHeight(bounds)),
+    // ?_ for busting cache to avoid failure on CORS
+    await resizeImage(imageUrl+'?_', boundWidth(bounds), boundHeight(bounds)),
     bounds,
     prompt_text.slice(0, 10)
   )
