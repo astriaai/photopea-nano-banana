@@ -1,14 +1,21 @@
-
-async function finalizeResponse(serverPrompt, bounds, prompt) {
-  const imageUrl = serverPrompt.images[0];
-  document.getElementById('preview-image').src = imageUrl;
-  console.log('resizing back to', boundWidth(bounds), boundHeight(bounds), 'bounds', bounds)
-  await photopeaContext.pasteImageOnPhotopea(
-    await resizeImage(imageUrl, boundWidth(bounds), boundHeight(bounds)),
-    bounds,
-    prompt.slice(0, 10)
-  )
+function initializeModels() {
+  const select = document.getElementById('model-select');
+  if (!select || !window.MODEL_URLS) return;
+  // Clear existing options
+  select.innerHTML = '';
+  // Populate from MODEL_URLS
+  Object.entries(window.MODEL_URLS).forEach(([name, url], index) => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    if (index === 0) opt.selected = true;
+    select.appendChild(opt);
+  });
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+  initializeModels();
+});
 
 function dataURItoBlob(dataURI) {
   // convert base64 to raw binary data held in a string
@@ -35,17 +42,6 @@ function dataURItoBlob(dataURI) {
 
 }
 
-// Toggle spinner visibility and disable/enable the submit button during processing
-function toggleProcessing(isProcessing) {
-  const spinner = document.getElementById('spinner');
-  const form = document.getElementById('prompt-form');
-  const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
-  if (spinner) spinner.classList.toggle('hidden', !isProcessing);
-  if (submitBtn) submitBtn.disabled = isProcessing;
-}
-
-let isProcessing = false;
-
 async function getImageBlob() {
   const imageBuffer = await photopeaContext.invokeAsTask('exportAllLayers', 'PNG');
   let bounds;
@@ -69,6 +65,29 @@ async function getImageBlob() {
   return [imageBlob, bounds];
 }
 
+// Toggle spinner visibility and disable/enable the submit button during processing
+function toggleProcessing(isProcessing) {
+  const spinner = document.getElementById('spinner');
+  const form = document.getElementById('prompt-form');
+  const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+  if (spinner) spinner.classList.toggle('hidden', !isProcessing);
+  if (submitBtn) submitBtn.disabled = isProcessing;
+}
+
+let isProcessing = false;
+
+async function pasteBackResponseImage(serverPrompt, bounds, prompt_text) {
+  const imageUrl = serverPrompt.images[0];
+  document.getElementById('preview-image').src = imageUrl;
+  console.log('resizing back to', boundWidth(bounds), boundHeight(bounds), 'bounds', bounds)
+  await photopeaContext.pasteImageOnPhotopea(
+    await resizeImage(imageUrl, boundWidth(bounds), boundHeight(bounds)),
+    bounds,
+    prompt_text.slice(0, 10)
+  )
+}
+
+
 document.getElementById('prompt-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (isProcessing) return; // Prevent duplicate submissions
@@ -76,15 +95,19 @@ document.getElementById('prompt-form').addEventListener('submit', async (event) 
   toggleProcessing(true);
   let id = null;
   try {
-    const prompt_text = document.getElementById('prompt-input').value;
     const form = new FormData();
-    form.append('prompt[text]', prompt_text);
-    form.append('prompt[num_images]', 1);
     const [imageBlob, bounds] = await getImageBlob();
-    form.append('prompt[input_image]', imageBlob, 'image.png')
-    const serverPrompt = await createPrompt(GEMINI_URL, form)
-    await finalizeResponse(serverPrompt, bounds, prompt_text)
+    const url = document.getElementById('model-select').value
+    const prompt_text = document.getElementById('prompt-input').value;
+    const serverPrompt = await createPromptByModelName(url, {
+      text: prompt_text,
+      input_image: imageBlob,
+    })
+    await pasteBackResponseImage(serverPrompt, bounds, prompt_text)
   } catch (e) {
+    if(e.message === 'Request failed with status code 401') {
+      signout()
+    }
     console.error(e);
     alert(e?.message || 'An unexpected error occurred.');
   } finally {

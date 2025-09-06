@@ -16,8 +16,14 @@
 
   <div id="main" class="hidden">
     <form id="prompt-form" class="form-control">
-      <label class="label" for="prompt-input">Enter prompt</label>
-      <input id="prompt-input" name="prompt" type="text" placeholder="Type prompt..." class="input input-bordered w-full" required />
+      <div class="mb-2">
+        <label class="label" for="prompt-input">Enter prompt</label>
+        <input id="prompt-input" name="prompt" type="text" placeholder="Type prompt..." class="input input-bordered w-full" />
+      </div>
+      <div class="w-full mb-2">
+        <label class="label" for="model-select">Model</label>
+        <select id="model-select" class="select select-bordered w-full"></select>
+      </div>
       <button type="submit" class="btn btn-primary my-4">
         Submit
         <span id="spinner" class="ml-2 hidden">
