@@ -67,17 +67,24 @@ async function createTune(base_tune_id, payload) {
     // ]
   }
   const formData = appendToFormData(tunePayload, 'tune')
-  const response = await axiosInstance.post('/tunes', formData);
-  const tuneData = response.data;
-  // if(!tuneData.prompts || tuneData.prompts.length == 0) {
-  //   throw new Error("Failed creating prompts");
-  // }
-  // return await pollPrompt(tuneData.prompts[0].id);
+  try {
+    const response = await axiosInstance.post('/tunes', formData);
+    const tuneData = response.data;
+    // if(!tuneData.prompts || tuneData.prompts.length == 0) {
+    //   throw new Error("Failed creating prompts");
+    // }
+    // return await pollPrompt(tuneData.prompts[0].id);
 
-  const responsePrompt = await axiosInstance.post(`/tunes/${tuneData.id}/prompts`, appendToFormData(payload, 'prompt'));
-  const processedPrompt =  await pollPrompt(responsePrompt.data.id);
-  processedPrompt.tunes = [tuneData];
-  return processedPrompt;
+    const responsePrompt = await axiosInstance.post(`/tunes/${tuneData.id}/prompts`, appendToFormData(payload, 'prompt'));
+    const processedPrompt =  await pollPrompt(responsePrompt.data.id);
+    processedPrompt.tunes = [tuneData];
+    return processedPrompt;
+  } catch (err) {
+    if (err?.response?.status === 422) {
+      throw new Error(JSON.stringify(err.response.data));
+    }
+    throw err;
+  }
 }
 
 function appendToFormData(payload, prefix, formData) {
