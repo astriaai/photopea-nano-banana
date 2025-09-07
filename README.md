@@ -1,5 +1,6 @@
 # Photopea Plugin for Nano-Banana
 
+[See tutorial on Youtube](https://www.youtube.com/watch?v=gvvw0sPsv20)
 [![Tutorial](https://img.youtube.com/vi/gvvw0sPsv20/0.jpg)](https://www.youtube.com/watch?v=gvvw0sPsv20)
 
 ## Install
