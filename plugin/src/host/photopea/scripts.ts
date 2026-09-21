@@ -1,6 +1,7 @@
 // The JavaScript Photopea executes. Photopea runs scripts in its own ES5-style
 // interpreter: no arrow functions, template strings, let/const, spread or
-// try/finally (a `finally` block is not run), and a fatal interpreter error
+// try/finally (a `finally` block is not run, and a `return` inside `try` is
+// lost, so assign inside and return after), and a fatal interpreter error
 // (such as reading a property of undefined) ends the script silently without
 // the `done` acknowledgement. Every script therefore reports through markers
 // the transport recognises, keeps statements simple, and is followed by a
@@ -26,13 +27,16 @@ export function layerName(text: string, fallback = "Astria"): string {
 export const PRELUDE = `
 function __emit(v) { app.echoToOE(__r + JSON.stringify(v)); }
 function __b(b) { return b ? [b[0].value, b[1].value, b[2].value, b[3].value] : null; }
+function __sel(d) { var r = null; try { r = __b(d.selection.bounds); } catch (e) { r = null; } return r; }
+function __deselect(d) { try { d.selection.deselect(); } catch (e) {} }
 function __ids(d) { var r = []; for (var i = 0; i < d.layers.length; i++) r.push(d.layers[i].id); return r; }
 function __topLayer(d) { for (var i = 0; i < d.layers.length; i++) { if (d.layers[i].typename !== "LayerSet") return d.layers[i]; } return null; }
 function __findLayer(d, id) { for (var i = 0; i < d.layers.length; i++) { if (d.layers[i].id === id) return d.layers[i]; } return null; }
-function __docIndex(d) { for (var i = 0; i < app.documents.length; i++) { if (app.documents[i] === d) return i; } return -1; }
+function __docIndex(d) { for (var i = 0; i < app.documents.length; i++) { var o = app.documents[i]; if (String(o.name) === String(d.name) && String(o.source || "") === String(d.source || "") && o.width === d.width && o.height === d.height) return i; } return -1; }
 function __docInfo(d, index) {
-  return { index: index, name: String(d.name), source: String(d.source || ""), width: d.width, height: d.height, layerCount: d.layers.length, layerIds: __ids(d), activeLayerId: d.activeLayer.id, activeLayerName: String(d.activeLayer.name), selection: __b(d.selection.bounds) };
+  return { index: index, name: String(d.name), source: String(d.source || ""), width: d.width, height: d.height, layerCount: d.layers.length, layerIds: __ids(d), activeLayerId: d.activeLayer.id, activeLayerName: String(d.activeLayer.name), selection: __sel(d) };
 }
+// Adds a reveal-selection layer mask to the active layer. Photopea clears the selection afterwards.
 function __rvls() {
   var desc = new ActionDescriptor(); var ref = new ActionReference();
   ref.putClass(charIDToTypeID("Chnl")); desc.putReference(charIDToTypeID("null"), ref);
@@ -72,7 +76,7 @@ else { app.activeDocument.saveToOE("png"); __emit({ ok: true }); }`,
 if (!app.documents.length) { __emit({ error: "no-document" }); }
 else {
   var d = app.activeDocument;
-  if (!d.selection.bounds) { __emit({ error: "no-selection" }); }
+  if (!__sel(d)) { __emit({ error: "no-selection" }); }
   else {
     var prevId = d.activeLayer.id;
     var top = __topLayer(d); if (top) d.activeLayer = top;
@@ -119,7 +123,7 @@ else { app.activeDocument = app.documents[idx]; var d2 = app.activeDocument; __e
 
   storeSelection: (tempName: string) => `
 var d = app.activeDocument;
-if (!d.selection.bounds) { __emit({ stored: false }); }
+if (!__sel(d)) { __emit({ stored: false }); }
 else {
   var top = __topLayer(d); if (top) d.activeLayer = top;
   var T = d.artLayers.add(); T.name = ${arg(tempName)};
@@ -128,7 +132,7 @@ else {
 }`,
 
   deselect: () => `
-var d = app.activeDocument; if (d.selection.bounds) d.selection.deselect(); __emit({ ok: true });`,
+var d = app.activeDocument; __deselect(d); __emit({ ok: true, selection: __sel(d) });`,
 
   placeImage: (dataUrl: string) => `
 var d = app.activeDocument; var top = __topLayer(d); if (top) d.activeLayer = top;
@@ -140,13 +144,13 @@ __emit({ before: before });`,
 var d = app.activeDocument; var ids = __ids(d); var newIds = []; var before = ${arg(before)};
 for (var i = 0; i < ids.length; i++) { if (before.indexOf(ids[i]) < 0) newIds.push(ids[i]); }
 var L = d.activeLayer;
-__emit({ newIds: newIds, activeId: L.id, activeIsNew: before.indexOf(L.id) < 0, smart: L.kind == LayerKind.SMARTOBJECT, bounds: __b(L.bounds), hasSelection: !!d.selection.bounds });`,
+__emit({ newIds: newIds, activeId: L.id, activeIsNew: before.indexOf(L.id) < 0, smart: L.kind == LayerKind.SMARTOBJECT, bounds: __b(L.bounds), hasSelection: !!__sel(d) });`,
 
   transformLayer: (layerId: number, percent: number, target: ScriptBounds, name: string) => `
 var d = app.activeDocument; var L = __findLayer(d, ${arg(layerId)});
 if (!L) { __emit({ error: "layer-missing" }); }
 else {
-  d.activeLayer = L; if (d.selection.bounds) d.selection.deselect();
+  d.activeLayer = L; if (__sel(d)) __deselect(d);
   var b1 = __b(L.bounds);
   L.resize(${arg(percent)}, ${arg(percent)}, AnchorPosition.MIDDLECENTER);
   var b2 = __b(L.bounds);
@@ -165,7 +169,7 @@ else {
   d.activeLayer = T; __loadMaskSelection(); d.activeLayer = P;
   if (${arg(radius)} > 0) { d.selection.expand(${arg(radius)}); d.selection.feather(${arg(radius)}); }
   __rvls();
-  d.selection.deselect();
+  __deselect(d);
   __emit({ ok: true });
 }`,
 
@@ -173,7 +177,7 @@ else {
 var d = app.activeDocument; var T = __findLayer(d, ${arg(tempLayerId)});
 if (T) { d.activeLayer = T; __loadMaskSelection(); T.remove(); }
 var A = ${arg(activateLayerId)} === null ? null : __findLayer(d, ${arg(activateLayerId)}); if (A) d.activeLayer = A;
-__emit({ restored: !!T, selection: __b(d.selection.bounds) });`,
+__emit({ restored: !!T, selection: __sel(d) });`,
 
   removeLayersByPrefix: (prefix: string) => `
 var removed = 0;

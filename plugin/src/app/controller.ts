@@ -432,6 +432,9 @@ export class AppController {
 
   async generate(options: { preserve?: boolean } = {}): Promise<void> {
     if (!this.canGenerate()) return;
+    // A fresh look at the document, so the note about a missing one is current.
+    await this.refreshInspection();
+    if (!this.canGenerate()) return;
     const model = this.selectedModel();
     const account = this.state.account;
     if (!model) return;

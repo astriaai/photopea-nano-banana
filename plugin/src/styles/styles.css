@@ -48,6 +48,10 @@ button:disabled, [aria-disabled="true"], [data-disabled] { cursor: default; }
 ::-webkit-scrollbar-thumb { border-radius: 999px; background: hsl(var(--foreground) / 0.16); }
 ::-webkit-scrollbar-track { background: transparent; }
 
+/* Development layout: the panel on the left, Photopea filling the rest (`?host=embed`). */
+body.embed-photopea #root { position: fixed; left: 0; top: 0; bottom: 0; width: 380px; border-right: 1px solid hsl(var(--border)); }
+body.embed-photopea .photopea-frame { position: fixed; left: 381px; top: 0; right: 0; bottom: 0; width: calc(100% - 381px); height: 100%; border: 0; background: #474747; }
+
 .progress-indeterminate {
   width: 40%;
   animation: progress-slide 1.4s ease-in-out infinite;

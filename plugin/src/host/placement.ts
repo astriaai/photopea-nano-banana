@@ -92,20 +92,23 @@ export async function placeResults(host: Host, request: PlacementRequest): Promi
         throw new HostError("placement", "Photopea did not add the image as a new layer.");
       }
       if (!check.isSmartObject) warnings.push("The result was placed as a raster layer rather than a smart object.");
-      let placedBounds = check.bounds;
-      if (!placedBounds || check.hasSelection) {
-        // Bounds are unreliable under a selection; Photopea centres a placed image on the canvas.
-        placedBounds = centredBounds(imageWidth, imageHeight, request.destination);
+      // Photopea opens an image at 100%, or fitted inside the canvas when it is
+      // larger, centred either way, and reports a layer's opaque bounds only.
+      // The extent is therefore derived from the pixel size; the reported
+      // bounds merely confirm it for an opaque image.
+      const frame = containFrame(imageWidth, imageHeight, request.destination);
+      const baked = maskMode === "baked";
+      if (!baked && check.bounds && !check.hasSelection && !boundsClose(check.bounds, frame, 3)) {
+        warnings.push(`Layer ${index + 1} opened at ${describe(check.bounds)} rather than the expected ${describe(frame)}.`);
       }
-      const plan = planPlacement({ placedBounds, captureBounds: request.capture });
+      const plan = planPlacement({ placedBounds: frame, captureBounds: request.capture });
       const result = await host.transformLayer(layerId, plan.percent, request.capture, indexedName(request.layerName, index, request.images.length));
       placedLayerIds.push(layerId);
       lastPlacedId = layerId;
       if (result.placed) {
-        const expected = expectedBounds(placedBounds, plan.scale, request.capture);
-        if (!boundsClose(result.placed, expected, 3)) {
-          warnings.push(`Layer ${index + 1} landed at ${describe(result.placed)} instead of ${describe(expected)}.`);
-        }
+        const expected = expectedBounds(frame, plan.scale, request.capture);
+        const fits = baked ? boundsWithin(result.placed, expected, 3) : boundsClose(result.placed, expected, 3);
+        if (!fits) warnings.push(`Layer ${index + 1} landed at ${describe(result.placed)} instead of ${describe(expected)}.`);
       }
       if (maskMode === "host" && tempLayerId !== null) {
         await host.applyRevealMask(tempLayerId, layerId, radius);
@@ -142,10 +145,20 @@ export async function cleanupTempLayers(host: Host): Promise<void> {
   }
 }
 
-function centredBounds(imageWidth: number, imageHeight: number, document: DocumentIdentity): Bounds {
-  const left = Math.round((document.width - imageWidth) / 2);
-  const top = Math.round((document.height - imageHeight) / 2);
-  return { left, top, right: left + imageWidth, bottom: top + imageHeight };
+/** Where Photopea puts an opened image: at 100% or fitted inside the canvas, centred. */
+export function containFrame(imageWidth: number, imageHeight: number, document: { width: number; height: number }): Bounds {
+  const scale = Math.min(1, document.width / imageWidth, document.height / imageHeight);
+  const w = imageWidth * scale;
+  const h = imageHeight * scale;
+  const left = (document.width - w) / 2;
+  const top = (document.height - h) / 2;
+  return { left, top, right: left + w, bottom: top + h };
+}
+
+/** Whether `inner` lies inside `outer`, allowing `tolerance` px of overhang. */
+function boundsWithin(inner: Bounds, outer: Bounds, tolerance: number): boolean {
+  return inner.left >= outer.left - tolerance && inner.top >= outer.top - tolerance &&
+    inner.right <= outer.right + tolerance && inner.bottom <= outer.bottom + tolerance;
 }
 
 function expectedBounds(placed: Bounds, scale: number, capture: Bounds): Bounds {

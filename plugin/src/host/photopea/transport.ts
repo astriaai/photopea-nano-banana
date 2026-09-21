@@ -222,6 +222,30 @@ export function browserEnvironment(options: { hostOrigin?: string | null; allowe
   };
 }
 
+/**
+ * Development only: Photopea embedded in a child frame of the plugin page
+ * (`?host=embed`) instead of the plugin being embedded in Photopea. The
+ * scripts and replies are the same; only the window they travel to differs.
+ */
+export function childFrameEnvironment(frame: HTMLIFrameElement, options: { allowedOrigins?: string[] } = {}): TransportEnvironment {
+  const allowed = new Set(options.allowedOrigins ?? ALLOWED_HOST_ORIGINS);
+  return {
+    post: (script) => {
+      if (!frame.contentWindow) throw new HostError("unavailable", "The Photopea frame is not loaded.");
+      frame.contentWindow.postMessage(script, "*");
+    },
+    onMessage: (listener) => {
+      const handler = (event: MessageEvent) => listener({ data: event.data, source: event.source, origin: event.origin });
+      window.addEventListener("message", handler);
+      return () => window.removeEventListener("message", handler);
+    },
+    isHostSource: (source) => source === frame.contentWindow,
+    isHostOrigin: (origin) => allowed.has(origin),
+    setTimeout: (callback, ms) => window.setTimeout(callback, ms),
+    clearTimeout: (id) => window.clearTimeout(id)
+  };
+}
+
 /** The embedding page's origin when the browser exposes it, else null. */
 export function detectHostOrigin(): string | null {
   try {
