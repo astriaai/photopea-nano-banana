@@ -18,7 +18,26 @@
 2. Open the plugin, write a prompt and click generate
 3. The plugin will generate an image and paste it as a new layer
 
-# Development:
+# Version 2 (preview)
+
+A rewrite in React/TypeScript lives under `plugin/` and is built into `next/`,
+served at https://astriaai.github.io/photopea-nano-banana/next/ beside this
+legacy plugin. See [docs/photopea-plugin.md](docs/photopea-plugin.md) for the
+architecture, the Photopea scripting findings, the validation record and the
+open decisions.
+
+```shell
+npm install
+npm run dev     # https://localhost:4443 (self-signed server.pem, see below)
+npm run test    # vitest
+npm run build   # rebuilds next/; commit it to deploy the preview
+```
+
+Open `?fixture=1&mock=1` on the dev server for UI work without Photopea or
+the API, or `?host=embed&mock=1` to drive a real Photopea in a side frame.
+`environment.next.json` loads the preview build in Photopea.
+
+# Development (legacy plugin):
 1. Launch (see instructions to create SSL cert in server.py)
 ```shell
 python3 server.py
