@@ -2,9 +2,10 @@
 
 Status as of 2026-09-21: implemented as a preview build under `next/`, served
 at `https://astriaai.github.io/photopea-nano-banana/next/` beside the legacy
-plugin at the repository root. Capture and placement were validated in
-Photopea (app version 30) with a mock backend; no paid generation was run.
-The production plugin URL and manifest are unchanged.
+plugin at the repository root. The published build was exercised end to end
+inside Photopea's plugin panel (app version 30) with a mock backend, and the
+production API answers it from that origin; no paid generation was run. The
+production plugin URL and manifest are unchanged.
 
 ## Layout
 
@@ -152,11 +153,28 @@ Remove background tool on an exact selection; document closed during
 generation, retained result, reopened document matched by identity, placed
 again without regeneration; transport recovery after a timed-out request.
 
-Not yet exercised: a paid generation against api.astria.ai from the
-GitHub Pages origin, references and the current-layer capture in Photopea,
-nested and hidden layers, very large documents, Safari and Firefox, and the
-plugin inside Photopea's own panel at narrow widths (the plugin loads and
-answers there; the browser pane used for testing could not render it).
+Published build inside Photopea's own plugin panel
+(`https://astriaai.github.io/photopea-nano-banana/next/?mock=1` loaded through
+an `environment.plugins` entry, panel at its default 300 px width and at
+340 px): handshake on load; sign-in; a magic-wand selection of the pug's face
+edited and placed as a smart object masked to that irregular selection, with
+Photopea's history showing Expand, Feather, Add Raster Mask and the temporary
+layer's removal, and the selection restored; the current layer added as a
+reference (masked smart object exported alone and trimmed) and a second
+generation through the reference-tune path; the History pill listing and
+starring the prompt; Cmd+Enter from the textarea; Stop during generation with
+nothing placed; sign-out clearing the stored key (reload shows sign-in);
+sign-in surviving a reload of the plugin frame (third-party storage persists).
+
+Production API from the published origin (no credentials): `plugin/models`,
+`users` and `workspaces.json` answer 401 through CORS, and a bogus key
+entered in the published sign-in screen shows "That API key was rejected".
+
+Not yet exercised: a paid generation with a real key (the request shapes are
+the ones the mock validates, and the account, workspace and catalog calls are
+the same code path as the rejected-key check above); dropping files from the
+OS onto the panel; nested and hidden layers; very large documents; Safari and
+Firefox.
 
 ## Open decisions
 
