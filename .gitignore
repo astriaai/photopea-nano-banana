@@ -1,2 +1,5 @@
 server.pem
 .idea
+node_modules/
+.vite/
+server.pem.expired

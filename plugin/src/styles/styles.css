@@ -1,0 +1,87 @@
+/* Tokens ported from nano-banana-photoshop-uxp/nano-banana/ui-src/src/styles.css
+   (commit ffe30c1b). Photopea does not expose its theme to plugins, and its
+   own UI is dark by default, so the panel is dark unless `data-theme="light"`
+   is set on the root. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --background: 0 0% 8.6%;
+  --foreground: 0 0% 96%;
+  --card: 0 0% 13.7%;
+  --muted: 0 0% 19%;
+  --muted-foreground: 0 0% 70.6%;
+  --border: 0 0% 27%;
+  --primary: 231 92% 68%;
+  --primary-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: 0 0% 94%;
+  --foreground: 0 0% 10%;
+  --card: 0 0% 100%;
+  --muted: 0 0% 89%;
+  --muted-foreground: 0 0% 40%;
+  --border: 0 0% 82%;
+  --primary: 211 88% 50%;
+  --primary-foreground: 0 0% 100%;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; min-height: 100%; margin: 0; }
+body { overflow: hidden; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+button, input, textarea { font: inherit; }
+button { border: 0; }
+button, [role="button"], [role="option"], [role="menuitem"] { cursor: pointer; }
+button:disabled, [aria-disabled="true"], [data-disabled] { cursor: default; }
+::selection { background: hsl(var(--primary) / 0.35); }
+.menu-icon svg { width: 100%; height: 100%; display: block; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { border-radius: 999px; background: hsl(var(--foreground) / 0.16); }
+::-webkit-scrollbar-track { background: transparent; }
+
+.progress-indeterminate {
+  width: 40%;
+  animation: progress-slide 1.4s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+/* Narrow panels: the composer loses some radius and padding but every control stays reachable. */
+@media (max-width: 280px) {
+  .prompt-studio { border-radius: 14px; }
+  .option-bar { padding: 8px; }
+}
+
+/* Short panels: thumbnails and the prompt give up height before Generate does. */
+@media (max-height: 390px) {
+  .thumbnail-strip { padding: 6px 10px 4px 4px; }
+  .thumbnail-strip .thumbnail-row > * { width: 48px; height: 48px; }
+  .thumbnail-strip .add-image-label { display: none; }
+  .prompt-input { min-height: 48px; padding-top: 9px; padding-bottom: 9px; }
+  .option-bar { padding: 8px; }
+}
+
+@media (max-height: 280px) {
+  .prompt-input { min-height: 40px; }
+  .option-bar { gap: 4px; padding: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

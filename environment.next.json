@@ -1,0 +1,15 @@
+{
+  "files": [
+    "https://mp.astria.ai/tzpai1h8cvjmgyd1o4ox79h7rthz"
+  ],
+  "environment": {
+    "plugins": [
+      {
+        "name": "Astria for Photopea (preview)",
+        "description": "Selection-based AI image generation (Nano-Banana) - preview build",
+        "url": "https://astriaai.github.io/photopea-nano-banana/next/",
+        "icon": "https://astriaai.github.io/photopea-nano-banana/icon.jpeg"
+      }
+    ]
+  }
+}

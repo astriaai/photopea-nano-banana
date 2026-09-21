@@ -1,0 +1,31 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "plugin-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--host",
+        "localhost"
+      ],
+      "port": 4443,
+      "url": "https://localhost:4443"
+    },
+    {
+      "name": "plugin-dev-http",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PLUGIN_HTTP=1",
+        "npx",
+        "vite",
+        "--host",
+        "localhost",
+        "--port",
+        "5174"
+      ],
+      "port": 5174,
+      "url": "http://localhost:5174"
+    }
+  ]
+}
