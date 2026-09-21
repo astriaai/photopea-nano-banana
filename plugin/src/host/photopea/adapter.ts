@@ -54,7 +54,7 @@ function hex(value: unknown): string | null {
 
 export class PhotopeaHost implements Host {
   readonly kind = "photopea" as const;
-  private transport: PhotopeaTransport;
+  readonly transport: PhotopeaTransport;
 
   constructor(transport: PhotopeaTransport) {
     this.transport = transport;

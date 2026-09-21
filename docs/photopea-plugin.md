@@ -3,9 +3,10 @@
 Status as of 2026-09-21: implemented as a preview build under `next/`, served
 at `https://astriaai.github.io/photopea-nano-banana/next/` beside the legacy
 plugin at the repository root. The published build was exercised end to end
-inside Photopea's plugin panel (app version 30) with a mock backend, and the
-production API answers it from that origin; no paid generation was run. The
-production plugin URL and manifest are unchanged.
+inside Photopea's plugin panel (app version 30) with a mock backend, the
+production API answers it from that origin, and one paid generation ran
+through the plugin against api.astria.ai. The production plugin URL and
+manifest are unchanged.
 
 ## Layout
 
@@ -125,9 +126,10 @@ Query parameters on the plugin page:
 - `mock=1`: fake api.astria.ai; any key starting with `sd_` is accepted, a
   prompt containing "fail" is rejected, "error" fails during generation.
 - `host=embed`: this page hosts Photopea in a side frame and drives it
-  through the same transport (`window.__astria` exposes host, transport and
-  controller for console use). Use it from a plain HTTP origin when the
+  through the same transport. Use it from a plain HTTP origin when the
   self-signed certificate is not trusted.
+- On the dev server only, `window.__astria` exposes the host, transport and
+  controller for console or Playwright driving; the production bundle strips it.
 - `api=<url>`: another backend. `hostOrigin=<origin>`: an extra embedding origin.
 
 `environment.next.json` loads the preview build in Photopea; paste it into
@@ -170,11 +172,18 @@ Production API from the published origin (no credentials): `plugin/models`,
 `users` and `workspaces.json` answer 401 through CORS, and a bogus key
 entered in the published sign-in screen shows "That API key was rejected".
 
-Not yet exercised: a paid generation with a real key (the request shapes are
-the ones the mock validates, and the account, workspace and catalog calls are
-the same code path as the rejected-key check above); dropping files from the
-OS onto the panel; nested and hidden layers; very large documents; Safari and
-Firefox.
+Paid generation (real Photopea, real api.astria.ai through a local
+header-injecting proxy so the key never entered the browser): sign-in showed
+the real account, balance, workspaces and catalog (30 models); a 200×180
+selection on the pug edited with Nano Banana 2 at 1K, one image, prompt
+46836924, cost 33,000 mc ($0.33), the catalog's "usually about 1m 50s"
+estimate shown while polling, the result downloaded from the CDN and placed as
+a masked smart object named after the prompt with the selection restored, the
+balance refreshed afterwards. The request text carried the prompt followed by
+the preservation paragraph.
+
+Not yet exercised: dropping files from the OS onto the panel; nested and
+hidden layers; very large documents; Safari and Firefox.
 
 ## Open decisions
 

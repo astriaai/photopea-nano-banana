@@ -42,8 +42,6 @@ export async function bootstrap(): Promise<Bootstrapped> {
     });
     const photopea = new PhotopeaHost(transport);
     host = photopea;
-    // Console access for driving the real host during development.
-    (window as unknown as { __astria?: unknown }).__astria = { host: photopea, transport };
     try {
       await waitForFrame(frame);
       await photopea.ping();
@@ -73,7 +71,8 @@ export async function bootstrap(): Promise<Bootstrapped> {
   }
 
   const controller = new AppController({ version, host, hostStatus, hostMessage, api, storage, mockBackend: useMock });
-  if (embedPhotopea) (window as unknown as { __astria: Record<string, unknown> }).__astria.controller = controller;
+  // Console access for driving the plugin during development (dev server only; never in the production bundle).
+  if (import.meta.env.DEV) (window as unknown as { __astria: Record<string, unknown> }).__astria = { host, controller, transport: (host as { transport?: unknown }).transport ?? null };
   return { controller, host };
 }
 
