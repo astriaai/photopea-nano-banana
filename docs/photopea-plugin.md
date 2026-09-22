@@ -1,12 +1,13 @@
 # Astria Photopea plugin (version 2)
 
-Status as of 2026-09-21: implemented as a preview build under `next/`, served
-at `https://astriaai.github.io/photopea-nano-banana/next/` beside the legacy
-plugin at the repository root. The published build was exercised end to end
+Status as of 2026-09-22: in production at the installed plugin URL
+`https://astriaai.github.io/photopea-nano-banana/`, built from `plugin/` into
+`index.html` and `assets/` at the repository root; the legacy plugin's
+scripts are gone. Before the cutover the same build was exercised end to end
 inside Photopea's plugin panel (app version 30) with a mock backend, the
-production API answers it from that origin, and one paid generation ran
-through the plugin against api.astria.ai. The production plugin URL and
-manifest are unchanged.
+production API answered it from that origin, and one paid generation ran
+through the plugin against api.astria.ai. The manifest is unchanged, and the
+versioned storage migrates the key the legacy plugin saved.
 
 ## Layout
 
@@ -19,7 +20,7 @@ plugin/src/domain/          pure logic: catalog, request text, geometry, history
 plugin/src/services/astria/ HTTP client, backend contract, links, mock backend
 plugin/src/host/            Host interface, Photopea transport/scripts/adapter, capture, placement, fixture host
 plugin/src/storage/         versioned localStorage with the legacy-key migration
-next/                       committed build output (GitHub Pages serves main)
+index.html, assets/         committed build output at the root (GitHub Pages serves main)
 ```
 
 React reads the store through `useSyncExternalStore`; only `AppController`
@@ -125,7 +126,8 @@ npm install
 npm run dev        # https://localhost:4443 (needs server.pem; the origin the API allows)
 npm run check      # tsc
 npm run test       # vitest
-npm run build      # writes next/ (commit it to deploy the preview)
+npm run build      # writes index.html and assets/ (commit them to publish)
+npm run build:preview  # the same under next/, for a side-by-side preview
 ```
 
 Query parameters on the plugin page:
@@ -145,8 +147,9 @@ Query parameters on the plugin page:
   matters for the published origin.
 - `hostOrigin=<origin>`: an extra embedding origin.
 
-`environment.next.json` loads the preview build in Photopea; paste it into
-the [Photopea playground](https://www.photopea.com/api/playground) or open
+`environment.json` loads the production plugin in Photopea and
+`environment.dev.json` the dev server; paste one into the
+[Photopea playground](https://www.photopea.com/api/playground) or open
 `https://www.photopea.com#<url-encoded json>`.
 
 ## Validation record
@@ -209,14 +212,14 @@ hidden layers; very large documents; Safari and Firefox.
    tokens defined behind `data-theme="light"`.
 4. Attribution: the backend has no plugin identification channel other than
    the User-Agent; `aff=photopea` and UTM parameters are sent on links only.
-5. Cutover: replacing the root `index.html` with the build (and retiring the
-   legacy files) once a paid generation has been validated from the
-   production origin.
+5. Cutover: done on 2026-09-22 (commit "Cut over the plugin URL to the
+   version 2 build"); reverting that commit restores the legacy plugin.
 
 ## Rollout and rollback
 
-The preview is whatever `next/` holds on `main`; GitHub Pages builds
-`main` at `/`. Deploy by committing a new build; roll back by reverting that
-commit. Assets are content-hashed. The legacy plugin at the root keeps
-serving installed users, and the versioned storage migrates their saved key
-when they open the new build on the same origin.
+Production is whatever `index.html` and `assets/` hold on `main`; GitHub
+Pages builds `main` at `/` within a few minutes of a push. Deploy by
+committing a new build; roll back by reverting that commit. Assets are
+content-hashed, so a stale `index.html` never points at a missing file for
+long. `npm run build:preview` writes the same build under `next/` for a
+side-by-side preview when a change should be tried at a separate URL first.

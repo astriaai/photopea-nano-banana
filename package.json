@@ -8,7 +8,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "rm -rf assets && vite build",
+    "build:preview": "rm -rf next && PLUGIN_OUT_DIR=next vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
     "test": "vitest run",

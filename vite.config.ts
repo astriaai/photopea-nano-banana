@@ -40,10 +40,12 @@ export default defineConfig({
     }
   },
   build: {
-    // The preview build is committed and served by GitHub Pages under /next/
-    // beside the legacy plugin at the repository root.
-    outDir: resolve(__dirname, "next"),
-    emptyOutDir: true,
+    // The production build is committed at the repository root, which GitHub
+    // Pages serves at the plugin's installed URL; `npm run build:preview`
+    // writes it under next/ instead for a side-by-side preview. The root is
+    // never emptied (the build script removes the previous assets/ first).
+    outDir: resolve(__dirname, process.env.PLUGIN_OUT_DIR || "."),
+    emptyOutDir: false,
     sourcemap: false,
     target: ["chrome111", "safari16", "firefox115"]
   },
