@@ -92,6 +92,15 @@ and reports which images were placed; the images stay retained for
 succeeded | failed | cancelled`. The composer is snapshotted at submission.
 References are uploaded as a temporary `faceid` tune and the prompt is
 created under it. Polling is bounded by the catalog's per-resolution timeout.
+While generating, the countdown is the web app's (sdbooth
+`ProgressTile#useProgressEstimate`): each poll reply carries the backend's
+`progress_timing_seconds` (the prompt's P90 duration) and
+`progress_elapsed_seconds` (processing time so far, 0 while queued); the bar
+shows elapsed over P90 clamped to 2-95% with "~Ns" remaining, "Taking longer
+than expected..." past the estimate, and "Queued" without a bar until the
+backend starts processing. A backend without those fields (they were added to
+`GET /prompts/:id` on 2026-09-22) falls back to the catalog average and the
+local clock.
 Stop aborts local waiting only; the message says the server may still finish
 and bill. Nothing is deleted server-side (see open decisions). Images are
 retained before placement so a placement failure never costs a generation.

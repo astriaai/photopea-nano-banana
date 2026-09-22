@@ -23,12 +23,14 @@ function ProgressBar({ value }: { value: number | null }) {
 function WorkingStatus({ job }: { job: Extract<JobState, { status: "working" }> }) {
   const controller = useController();
   const [now, setNow] = React.useState(() => Date.now());
-  const ticking = job.stage === "generating" && Boolean(job.startedAt);
+  // The countdown ticks on the local clock between server snapshots, at the
+  // web app's cadence.
+  const ticking = job.stage === "generating" && job.startedAt != null;
 
   React.useEffect(() => {
     if (!ticking) return;
     setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 250);
+    const timer = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(timer);
   }, [ticking, job.startedAt]);
 
@@ -44,7 +46,7 @@ function WorkingStatus({ job }: { job: Extract<JobState, { status: "working" }> 
           </Button>
         )}
       </div>
-      <ProgressBar value={progress.value} />
+      {!progress.queued && <ProgressBar value={progress.value} />}
       {progress.detail && <p className="mt-1 truncate text-[10px] text-muted-foreground/80">{progress.detail}</p>}
     </div>
   );

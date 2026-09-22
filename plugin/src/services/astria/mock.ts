@@ -98,7 +98,11 @@ export function mockFetch(baseUrl: string): typeof fetch {
     if (show && method === "GET") {
       const prompt = prompts.get(Number(show[1]));
       if (!prompt) return json({ status: 404, error: "Not Found" }, 404);
-      const done = Date.now() - prompt.createdAt > 4000;
+      const age = (Date.now() - prompt.createdAt) / 1000;
+      // Queued for the first second, then processing against a 6 s P90 (drawn
+      // results land after 7 s, so the countdown visibly passes its estimate).
+      const started = age >= 1;
+      const done = age > 7;
       if (done && prompt.images.length === 0) {
         for (let index = 0; index < prompt.numImages; index++) {
           const imageUrl = `https://mp.astria.ai/mock/${prompt.id}-${index}.jpg`;
@@ -106,7 +110,8 @@ export function mockFetch(baseUrl: string): typeof fetch {
           prompt.images.push(imageUrl);
         }
       }
-      return json({ id: prompt.id, trained_at: done ? new Date().toISOString() : null, user_error: /error/i.test(prompt.text) && done ? "The provider refused this prompt." : null, images: done ? prompt.images : [], workspace_id: null });
+      const progress = done ? {} : { progress_timing_seconds: 6, progress_elapsed_seconds: started ? Math.floor(age - 1) : 0 };
+      return json({ id: prompt.id, trained_at: done ? new Date().toISOString() : null, started_training_at: started ? new Date(prompt.createdAt + 1000).toISOString() : null, user_error: /error/i.test(prompt.text) && done ? "The provider refused this prompt." : null, images: done ? prompt.images : [], workspace_id: null, ...progress });
     }
     if (method === "DELETE") return new Response(null, { status: 204 });
     return json({ status: 404, error: "Not Found" }, 404);

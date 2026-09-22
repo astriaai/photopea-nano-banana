@@ -422,6 +422,7 @@ export class AppController {
         startedAt: progress.startedAt ?? (job.status === "working" && job.stage === progress.stage ? job.startedAt : undefined),
         avgTime: progress.avgTime,
         timeout: progress.timeout,
+        progress: progress.progress,
         cancellable: progress.cancellable && !(job.status === "working" && job.cancelling),
         cancelling: job.status === "working" ? job.cancelling && progress.cancellable : false,
         current: progress.current,

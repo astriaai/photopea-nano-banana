@@ -12,9 +12,9 @@ import { captureForGeneration } from "../host/capture";
 import { placeResults, PlacementError, type PlacementOutcome } from "../host/placement";
 import { layerName } from "../host/photopea/scripts";
 import type { Host } from "../host/types";
-import { AstriaApi, downloadImage } from "../services/astria/api";
+import { AstriaApi, downloadImage, type PromptRecord } from "../services/astria/api";
 import type { Credentials } from "../services/astria/client";
-import type { JobStage, RetainedResult } from "./state";
+import type { JobStage, RetainedResult, ServerProgress } from "./state";
 
 export type JobInput = {
   jobId: number;
@@ -34,6 +34,7 @@ export type JobProgress = {
   startedAt?: number;
   avgTime?: number;
   timeout?: number;
+  progress?: ServerProgress;
   current?: number;
   total?: number;
 };
@@ -95,8 +96,14 @@ export async function runGeneration(deps: JobDeps, input: JobInput): Promise<Job
   }
 
   const timing = timingFor(model, input.resolution);
-  deps.report({ stage: "generating", cancellable: true, startedAt: Date.now(), avgTime: timing.avgTime, timeout: timing.timeout });
-  const finished = await api.pollPrompt(credentials, created.id, { timeoutSeconds: timing.timeout, signal });
+  const startedAt = Date.now();
+  const generating = (progress?: ServerProgress) => deps.report({ stage: "generating", cancellable: true, startedAt, avgTime: timing.avgTime, timeout: timing.timeout, progress });
+  generating(serverProgress(created));
+  const finished = await api.pollPrompt(credentials, created.id, {
+    timeoutSeconds: timing.timeout,
+    signal,
+    onSnapshot: (prompt) => generating(serverProgress(prompt))
+  });
 
   deps.report({ stage: "downloading", cancellable: true });
   const images: Blob[] = [];
@@ -122,6 +129,17 @@ export async function runGeneration(deps: JobDeps, input: JobInput): Promise<Job
   deps.report({ stage: "placing", cancellable: false, total: images.length });
   const placement = await placeRetained(host, result, (current, total) => deps.report({ stage: "placing", cancellable: false, current, total }));
   return { result, placement, warnings: [...warnings, ...placement.warnings] };
+}
+
+/**
+ * The countdown inputs from a poll reply: the prompt's own P90 duration and
+ * the processing time the backend has measured (PromptProgress). Undefined
+ * from a backend that does not send them, in which case the UI falls back to
+ * the catalog average and the local clock.
+ */
+export function serverProgress(prompt: PromptRecord, now = Date.now()): ServerProgress | undefined {
+  if (prompt.progressTimingSeconds === null || prompt.progressElapsedSeconds === null) return undefined;
+  return { timingSeconds: prompt.progressTimingSeconds, elapsedSeconds: prompt.progressElapsedSeconds, queued: !prompt.startedTrainingAt, receivedAt: now };
 }
 
 /** Places whatever of a retained result is not placed yet; records what landed even when a later image fails. */

@@ -1,13 +1,16 @@
-// Adapted from nano-banana-photoshop-uxp/nano-banana/ui-src/src/lib/progress.ts
-// (commit ffe30c1b). The provider reports no real progress: the bar is a
-// time estimate from the catalog's average duration and timeout.
+// Stage labels and the generation countdown. The countdown mirrors the web
+// app's (sdbooth ProgressTile#useProgressEstimate): the backend's P90
+// duration for the prompt and its measured processing time drive the bar,
+// with the catalog average as the fallback for an older backend.
 
-import type { JobStage } from "../app/state";
+import type { JobStage, ServerProgress } from "../app/state";
 
 export type ProgressEstimate = {
   /** 0-1 for a determinate bar, or null for an indeterminate one. */
   value: number | null;
   detail: string;
+  /** The backend has not started processing yet: the web app shows "Queued" in place of the bar. */
+  queued?: boolean;
 };
 
 export const STAGE_LABELS: Record<JobStage, string> = {
@@ -37,18 +40,35 @@ export function formatSeconds(seconds: number): string {
   return rest ? `${minutes}m ${rest}s` : `${minutes}m`;
 }
 
-export function estimateProgress(job: { stage: JobStage; startedAt?: number; avgTime?: number; timeout?: number }, now: number): ProgressEstimate {
-  if (job.stage !== "generating" || !job.startedAt) return { value: null, detail: "" };
+/**
+ * The countdown the web app shows for a generating prompt (sdbooth
+ * ProgressTile#useProgressEstimate): elapsed processing time over the
+ * prompt's P90 duration, both from the backend's latest snapshot with the
+ * local clock adding the time since, as a 2-95% bar with the remaining
+ * seconds; past the estimate the bar holds and the label says so. While the
+ * backend has not started processing the prompt is queued. Without a
+ * snapshot (an older backend) the catalog average and the local clock stand
+ * in.
+ */
+export function estimateProgress(
+  job: { stage: JobStage; startedAt?: number; avgTime?: number; timeout?: number; progress?: ServerProgress },
+  now: number
+): ProgressEstimate {
+  if (job.stage !== "generating") return { value: null, detail: "" };
+  const snapshot = job.progress;
+  if (snapshot) {
+    if (snapshot.queued) return { value: null, detail: "Queued", queued: true };
+    if (!snapshot.timingSeconds) return { value: 0.02, detail: "" };
+    const runtime = snapshot.elapsedSeconds + Math.max(0, now - snapshot.receivedAt) / 1000;
+    const percent = Math.min(95, Math.max(2, Math.round((runtime / snapshot.timingSeconds) * 100)));
+    const remaining = Math.max(0, Math.ceil(snapshot.timingSeconds - runtime));
+    return { value: percent / 100, detail: remaining > 0 ? `~${remaining}s` : "Taking longer than expected..." };
+  }
+  if (job.startedAt == null) return { value: null, detail: "" };
   const elapsed = Math.max(0, (now - job.startedAt) / 1000);
   const avgTime = job.avgTime && job.avgTime > 0 ? job.avgTime : 0;
-  const timeout = job.timeout && job.timeout > 0 ? job.timeout : 0;
   if (!avgTime) return { value: null, detail: `${formatSeconds(elapsed)} elapsed` };
-  if (elapsed < avgTime) {
-    return { value: Math.min(0.99, Math.max(0.01, elapsed / avgTime)), detail: `${formatSeconds(elapsed)} elapsed · usually about ${formatSeconds(avgTime)}` };
-  }
-  if (timeout) {
-    const remaining = Math.max(Math.ceil(timeout - elapsed), 0);
-    return { value: 0.99, detail: `Almost done… ${formatSeconds(remaining)} until timeout` };
-  }
-  return { value: 0.99, detail: `Almost done… ${formatSeconds(elapsed)} elapsed` };
+  const percent = Math.min(95, Math.max(2, Math.round((elapsed / avgTime) * 100)));
+  const remaining = Math.max(0, Math.ceil(avgTime - elapsed));
+  return { value: percent / 100, detail: remaining > 0 ? `~${remaining}s` : "Taking longer than expected..." };
 }

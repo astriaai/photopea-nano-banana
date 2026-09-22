@@ -21,10 +21,16 @@ export type Workspace = { id: string; title: string; faviconUrl: string; slug: s
 export type PromptRecord = {
   id: number;
   trainedAt: string | null;
+  /** When processing began; null while the prompt is still queued. */
+  startedTrainingAt: string | null;
   userError: string | null;
   images: string[];
   workspaceId: string;
   tuneId: number | null;
+  /** The backend's P90 duration for this prompt (PromptProgress), while in flight. */
+  progressTimingSeconds: number | null;
+  /** Seconds since processing began as measured by the backend; 0 while queued. */
+  progressElapsedSeconds: number | null;
 };
 
 export type ReferenceTune = { id: number; title: string };
@@ -69,13 +75,17 @@ export function parsePrompt(value: unknown): PromptRecord {
   const json = asObject(value);
   const id = Number(json.id);
   if (!Number.isFinite(id)) throw new ApiError(0, JSON.stringify(value), "astria.ai did not return the prompt.");
+  const seconds = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null);
   return {
     id,
     trainedAt: typeof json.trained_at === "string" ? json.trained_at : null,
+    startedTrainingAt: typeof json.started_training_at === "string" ? json.started_training_at : null,
     userError: typeof json.user_error === "string" && json.user_error ? json.user_error : null,
     images: Array.isArray(json.images) ? json.images.filter((item): item is string => typeof item === "string") : [],
     workspaceId: json.workspace_id != null ? String(json.workspace_id) : "",
-    tuneId: Number.isFinite(Number(json.tune_id)) ? Number(json.tune_id) : null
+    tuneId: Number.isFinite(Number(json.tune_id)) ? Number(json.tune_id) : null,
+    progressTimingSeconds: seconds(json.progress_timing_seconds),
+    progressElapsedSeconds: seconds(json.progress_elapsed_seconds)
   };
 }
 
@@ -90,7 +100,8 @@ export type PollOptions = {
   /** Seconds to keep polling before giving up. */
   timeoutSeconds: number;
   signal?: AbortSignal;
-  onTick?: (elapsedSeconds: number) => void;
+  /** Every server snapshot while the prompt is still in flight. */
+  onSnapshot?: (prompt: PromptRecord) => void;
 };
 
 export class AstriaApi {
@@ -151,8 +162,8 @@ export class AstriaApi {
         if (prompt.images.length === 0) throw new ApiError(0, "", "The generation finished without any image.");
         return prompt;
       }
+      options.onSnapshot?.(prompt);
       const elapsed = (Date.now() - started) / 1000;
-      options.onTick?.(elapsed);
       if (Date.now() >= deadline) {
         throw new ApiError(0, "", "The generation is taking longer than expected. Check astria.ai for the result; nothing was placed.");
       }

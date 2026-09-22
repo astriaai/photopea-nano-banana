@@ -19,6 +19,20 @@ export type ReferenceItem = {
 
 export type JobStage = "capturing" | "submitting" | "generating" | "downloading" | "placing";
 
+/**
+ * The backend's view of a generating prompt, as the web app's countdown uses
+ * it: `timingSeconds` is the P90 duration for this prompt, `elapsedSeconds`
+ * the processing time so far (0 while queued), both as of `receivedAt` on the
+ * local clock; the UI adds the time since. `queued` is true until the backend
+ * has started processing.
+ */
+export type ServerProgress = {
+  timingSeconds: number;
+  elapsedSeconds: number;
+  queued: boolean;
+  receivedAt: number;
+};
+
 export const STAGE_ORDER: JobStage[] = ["capturing", "submitting", "generating", "downloading", "placing"];
 
 /** A finished generation whose images are kept until placed, so placement can be retried without paying again. */
@@ -43,10 +57,13 @@ export type JobState =
       jobId: number;
       stage: JobStage;
       model: string;
-      /** When the provider request started; drives the time estimate. */
+      /** When the provider request started (local clock); the estimate before the first server snapshot. */
       startedAt?: number;
+      /** Catalog average for the model/resolution, the fallback estimate. */
       avgTime?: number;
       timeout?: number;
+      /** The latest server snapshot while generating. */
+      progress?: ServerProgress;
       cancellable: boolean;
       cancelling: boolean;
       current?: number;
