@@ -1,6 +1,3 @@
-/**
- * Image that contains all the necessary information pieces needed by A1111 API.
- */
 class PayloadImage {
   constructor(top, left, width, height, dataURL, isSolidColor) {
     this.top = top;
