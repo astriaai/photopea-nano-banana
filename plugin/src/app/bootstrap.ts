@@ -1,7 +1,8 @@
 // Chooses the host (Photopea, or the fixture when not embedded or when asked),
 // wires the API client and storage, and returns the controller. Query
 // parameters: `fixture=1` forces the fixture; `mock=1` fakes the backend;
-// `api=<url>` points at another backend (a local sdbooth);
+// `api=<url>` points at another backend directly (the dev server otherwise
+// proxies /astria-api/ to api.astria.ai, or to PLUGIN_API);
 // `hostOrigin=<origin>` adds an embedding origin.
 
 import { FixtureHost } from "../host/fixture/fixtureHost";
@@ -20,7 +21,9 @@ export type Bootstrapped = { controller: AppController; host: Host };
 export async function bootstrap(): Promise<Bootstrapped> {
   const params = new URLSearchParams(window.location.search);
   const version = __PLUGIN_VERSION__;
-  const apiUrl = params.get("api") || PRODUCTION_API_URL;
+  // On the dev server the API is reached through Vite's same-origin proxy
+  // (vite.config.ts), so no CORS allowlisting is needed for local ports.
+  const apiUrl = params.get("api") || (import.meta.env.DEV ? new URL("/astria-api/", window.location.href).href : PRODUCTION_API_URL);
   // `mock=1` fakes the backend even inside Photopea, so capture and placement
   // can be exercised against the real host without paid generations.
   const useMock = params.get("mock") === "1";

@@ -26,7 +26,18 @@ export default defineConfig({
     host: "localhost",
     port: 4443,
     strictPort: true,
-    https
+    https,
+    // The dev build calls the API through this same-origin path (see
+    // bootstrap.ts), so it works from any local port or scheme regardless of
+    // the API's CORS allowlist. PLUGIN_API overrides the upstream (a local
+    // sdbooth).
+    proxy: {
+      "/astria-api": {
+        target: process.env.PLUGIN_API || "https://api.astria.ai",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/astria-api/, "")
+      }
+    }
   },
   build: {
     // The preview build is committed and served by GitHub Pages under /next/

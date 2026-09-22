@@ -130,7 +130,11 @@ Query parameters on the plugin page:
   self-signed certificate is not trusted.
 - On the dev server only, `window.__astria` exposes the host, transport and
   controller for console or Playwright driving; the production bundle strips it.
-- `api=<url>`: another backend. `hostOrigin=<origin>`: an extra embedding origin.
+- `api=<url>`: another backend, called directly. Without it the dev server
+  proxies `/astria-api/` to api.astria.ai (or to `PLUGIN_API`), so the dev
+  build is same-origin on any local port; the API's CORS allowlist only
+  matters for the published origin.
+- `hostOrigin=<origin>`: an extra embedding origin.
 
 `environment.next.json` loads the preview build in Photopea; paste it into
 the [Photopea playground](https://www.photopea.com/api/playground) or open

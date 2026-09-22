@@ -61,7 +61,8 @@ export class AstriaClient {
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") throw error;
-      throw new ApiError(0, "", "astria.ai could not be reached. Check your connection and try again.");
+      const hint = import.meta.env.DEV ? ` (the browser blocked the request from ${window.location.origin}; see the console for the CORS or network error)` : "";
+      throw new ApiError(0, "", `astria.ai could not be reached${hint}. Check your connection and try again.`);
     }
     const text = await response.text().catch(() => "");
     if (response.ok) {
